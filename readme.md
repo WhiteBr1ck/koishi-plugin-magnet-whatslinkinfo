@@ -54,6 +54,14 @@ npm i koishi-plugin-magnet-whatslinkinfo
 | `showScreenshot` | `boolean` | `true`                               | 是否在结果中显示资源截图。                                                                         |
 | `debugMode`    | `boolean` | `false`                              | 是否开启调试模式。                                                                                  |
 
+## 📜 免责声明
+
+本插件仅作为技术学习和研究目的，所有数据均来源于第三方 API ([whatslink.info](https://whatslink.info/))。
+
+插件作者不存储、不分发、不制作任何资源文件，也不对通过磁力链接获取的内容的合法性、安全性、准确性负责。
+
+请用户在使用本插件时，严格遵守当地法律法规。任何因使用本插件而产生的法律后果，由用户自行承担。
+
 ## 📝 许可
 
 [MIT License](https://github.com/WhiteBr1ck/koishi-plugin-magnet-whatslinkinfo/blob/main/LICENSE) © 2025 WhiteBr1ck
