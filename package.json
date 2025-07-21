@@ -1,22 +1,41 @@
 {
   "name": "koishi-plugin-magnet-whatslinkinfo",
-  "description": "magnet",
-  "version": "0.0.1",
+  "version": "0.1.0",
+  "description": "一个基于 whatslink.info API 的 Koishi 插件，用于预览磁力链接信息和截图。",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
-    "lib",
-    "dist"
+    "lib"
   ],
+  "author": "WhiteBr1ck (https://github.com/WhiteBr1ck)",
   "license": "MIT",
-  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WhiteBr1ck/koishi-plugin-magnet-whatslinkinfo.git"
+  },
+  "bugs": {
+    "url": "https://github.com/WhiteBr1ck/koishi-plugin-magnet-whatslinkinfo/issues"
+  },
+  "homepage": "https://github.com/WhiteBr1ck/koishi-plugin-magnet-whatslinkinfo#readme",
   "keywords": [
-    "chatbot",
     "koishi",
-    "plugin"
+    "plugin",
+    "magnet",
+    "torrent",
+    "preview",
+    "whatslink"
   ],
-  "devDependencies": {},
   "peerDependencies": {
     "koishi": "^4.18.7"
+  },
+  "koishi": {
+    "service": {
+      "required": [
+        "http"
+      ]
+    },
+    "description": {
+      "zh-CN": "基于 whatslink.info API ，能够自动识别磁力链接并返回包含资源详情和截图的预览消息。"
+    }
   }
 }
