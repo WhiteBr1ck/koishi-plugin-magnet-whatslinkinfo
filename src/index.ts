@@ -43,7 +43,7 @@ export function apply(ctx: Context, config: Config) {
 
       if (!apiResponse) throw new Error('API 未返回任何数据')
       
-      const finalMessage = formatApiResponse(session, apiResponse, config, logger)
+      const finalMessage = await formatApiResponse(ctx, session, apiResponse, config, logger)
       await session.send(finalMessage)
 
     } catch (error) {
@@ -67,7 +67,7 @@ function formatBytes(bytes: number, decimals = 2) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]
 }
 
-function formatApiResponse(session: Session, data: any, config: Config, logger: Logger) {
+async function formatApiResponse(ctx: Context, session: Session, data: any, config: Config, logger: Logger) {
   const fileTypeIcons = {
     folder: '📁', video: '🎬', audio: '🎵', archive: '📦',
     image: '🖼️', document: '📄', text: '📝', font: '🔠', unknown: '❓',
@@ -83,7 +83,7 @@ function formatApiResponse(session: Session, data: any, config: Config, logger: 
   }
   textContent += `📝 资源名称: ${data.name}\n`
   textContent += `💾 总大小: ${formatBytes(data.size)}\n`
-  textContent += `🧩 文件数量: ${data.count}\n`
+  textContent += `🧩 文件数量: ${data.count}\n` 
   
   if (config.showScreenshot && Array.isArray(data.screenshots) && data.screenshots.length > 0) {
     textContent += `--------------------------\n🖼️ 截图预览:`
@@ -93,6 +93,7 @@ function formatApiResponse(session: Session, data: any, config: Config, logger: 
 
   if (config.showScreenshot && Array.isArray(data.screenshots) && data.screenshots.length > 0) {
     if (config.debugMode) logger.debug('API 返回的 screenshots 数据: %o', data.screenshots)
+    
     for (const item of data.screenshots) {
       let imageUrl: string | null = null
       if (item && typeof item.screenshot === 'string' && item.screenshot.startsWith('http')) {
@@ -100,8 +101,14 @@ function formatApiResponse(session: Session, data: any, config: Config, logger: 
       } else if (typeof item === 'string' && item.startsWith('http')) {
         imageUrl = item
       }
+      
       if (imageUrl) {
-        elements.push(h.image(imageUrl))
+        try {
+          const buffer = await ctx.http.get(imageUrl, { responseType: 'arraybuffer' })
+          elements.push(h.image(buffer, 'image/jpeg'))
+        } catch (err) {
+          logger.warn(`代理下载图片失败: ${imageUrl}, 错误: ${err.message}`)
+        }
       }
     }
   }
