@@ -10,6 +10,7 @@ export interface Config {
   useForward: boolean
   showScreenshot: boolean
   debugMode: boolean
+  sendSeparately: boolean
 }
 
 export const Config: Schema<Config> = Schema.object({
@@ -18,6 +19,7 @@ export const Config: Schema<Config> = Schema.object({
   useForward: Schema.boolean().description('在 QQ/OneBot 平台使用合并转发的形式发送结果。').default(false),
   showScreenshot: Schema.boolean().description('是否在结果中显示资源截图。').default(true),
   debugMode: Schema.boolean().description('是否开启调试模式。').default(false),
+  sendSeparately: Schema.boolean().description('是否将文本和图片作为独立消息分开发送。（此选项与合并转发冲突）').default(false),
 })
 
 export function apply(ctx: Context, config: Config) {
@@ -43,8 +45,11 @@ export function apply(ctx: Context, config: Config) {
 
       if (!apiResponse) throw new Error('API 未返回任何数据')
       
-      const finalMessage = await formatApiResponse(ctx, session, apiResponse, config, logger)
-      await session.send(finalMessage)
+      //  接收一个消息数组，并循环发送
+      const messagesToSend = await formatApiResponse(ctx, session, apiResponse, config, logger)
+      for (const message of messagesToSend) {
+        await session.send(message)
+      }
 
     } catch (error) {
       logger.error('插件执行出错:', error)
@@ -67,14 +72,13 @@ function formatBytes(bytes: number, decimals = 2) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]
 }
 
-async function formatApiResponse(ctx: Context, session: Session, data: any, config: Config, logger: Logger) {
+async function formatApiResponse(ctx: Context, session: Session, data: any, config: Config, logger: Logger): Promise<(h | string)[]> {
   const fileTypeIcons = {
     folder: '📁', video: '🎬', audio: '🎵', archive: '📦',
     image: '🖼️', document: '📄', text: '📝', font: '🔠', unknown: '❓',
   }
 
-  const elements: (h | string)[] = []
-
+  // 构建文本内容
   let textContent = `✅ 解析成功\n`
   textContent += `--------------------------\n`
   if (data.file_type) {
@@ -85,13 +89,15 @@ async function formatApiResponse(ctx: Context, session: Session, data: any, conf
   textContent += `💾 总大小: ${formatBytes(data.size)}\n`
   textContent += `🧩 文件数量: ${data.count}\n` 
   
-  if (config.showScreenshot && Array.isArray(data.screenshots) && data.screenshots.length > 0) {
+  const hasScreenshots = config.showScreenshot && Array.isArray(data.screenshots) && data.screenshots.length > 0
+  
+  if (hasScreenshots) {
     textContent += `--------------------------\n🖼️ 截图预览:`
   }
   
-  elements.push(textContent)
-
-  if (config.showScreenshot && Array.isArray(data.screenshots) && data.screenshots.length > 0) {
+  // 构建图片 h 元素列表
+  const imageElements: h[] = []
+  if (hasScreenshots) {
     if (config.debugMode) logger.debug('API 返回的 screenshots 数据: %o', data.screenshots)
     
     for (const item of data.screenshots) {
@@ -105,7 +111,7 @@ async function formatApiResponse(ctx: Context, session: Session, data: any, conf
       if (imageUrl) {
         try {
           const buffer = await ctx.http.get(imageUrl, { responseType: 'arraybuffer' })
-          elements.push(h.image(buffer, 'image/jpeg'))
+          imageElements.push(h.image(buffer, 'image/jpeg'))
         } catch (err) {
           logger.warn(`代理下载图片失败: ${imageUrl}, 错误: ${err.message}`)
         }
@@ -113,9 +119,25 @@ async function formatApiResponse(ctx: Context, session: Session, data: any, conf
     }
   }
 
-  if (config.useForward && ['qq', 'onebot'].includes(session.platform)) {
-    return h('figure', ...elements)
+
+  if (config.sendSeparately) {
+    // 分开发送：返回一个数组，第一项是文本，后面是N张图片
+    const messages: (h | string)[] = []
+    messages.push(h('message', textContent))
+    imageElements.forEach(imgElement => {
+      messages.push(h('message', imgElement))
+    })
+    return messages
   } else {
-    return h('message', ...elements)
+    // 单个消息块发送：将所有元素放入一个消息块中返回
+    const children = [textContent, ...imageElements] // 将所有要发送的元素放入一个数组
+
+    if (config.useForward && ['qq', 'onebot'].includes(session.platform)) {
+      // 明确地将 children 数组作为第三个参数传递
+      return [h('figure', {}, children)]
+    } else {
+      // 明确地将 children 数组作为第三个参数传递
+      return [h('message', {}, children)]
+    }
   }
 }

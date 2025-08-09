@@ -53,6 +53,8 @@ npm i koishi-plugin-magnet-whatslinkinfo
 | `useForward`   | `boolean` | `false`                              | 在 QQ/OneBot 平台使用合并转发的形式发送结果。                                                      |
 | `showScreenshot` | `boolean` | `true`                               | 是否在结果中显示资源截图。                                                                         |
 | `debugMode`    | `boolean` | `false`                              | 是否开启调试模式。                                                                                  |
+| `sendSeparately`    | `boolean` | `false`                              | 是否将文本和图片作为独立消息分开发送。（此选项与合并转发冲突）式。                                                                                  |
+
 
 ## 📜 免责声明
 

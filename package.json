@@ -1,6 +1,6 @@
 {
   "name": "koishi-plugin-magnet-whatslinkinfo",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "一个基于 whatslink.info API 的 Koishi 插件，用于预览磁力链接信息和截图。",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
