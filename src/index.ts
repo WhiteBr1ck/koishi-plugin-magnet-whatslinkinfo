@@ -11,11 +11,14 @@ export interface Config {
   showScreenshot: boolean
   debugMode: boolean
   sendSeparately: boolean
+  customUserAgent: string // 新增：自定义 User-Agent
+
 }
 
 export const Config: Schema<Config> = Schema.object({
   apiEndpoint: Schema.string().description('whatslink.info 的 API 请求地址。').default('https://whatslink.info/api/v1/link'),
   timeout: Schema.number().description('请求 API 的超时时间（毫秒）。').default(10000),
+  customUserAgent: Schema.string().description('请求 API 时使用的 User-Agent，留空则使用 koishi 默认值。建议设置为浏览器 UA。').default('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'),
   useForward: Schema.boolean().description('在 QQ/OneBot 平台使用合并转发的形式发送结果。').default(false),
   showScreenshot: Schema.boolean().description('是否在结果中显示资源截图。').default(true),
   debugMode: Schema.boolean().description('是否开启调试模式。').default(false),
@@ -40,10 +43,21 @@ export function apply(ctx: Context, config: Config) {
       const apiResponse = await ctx.http.get(config.apiEndpoint, {
         params: { url: magnetURI },
         timeout: config.timeout,
+        headers: {
+          // 使用配置中的 User-Agent
+          'User-Agent': config.customUserAgent,
+        }
       })
       if (config.debugMode) logger.info(`收到 API 响应`)
 
       if (!apiResponse) throw new Error('API 未返回任何数据')
+
+      // 检查返回内容是否为错误信息
+      if (apiResponse.name && typeof apiResponse.name === 'string' && apiResponse.name.toLowerCase().includes('frequent')) {
+        logger.warn(`API 返回请求频繁错误: ${apiResponse.name}`)
+        await session.send(h('message', h('quote', { id: session.messageId }), `解析失败：API 提示请求过于频繁。`))
+        return; // 提前结束执行
+      }
       
       //  接收一个消息数组，并循环发送
       const messagesToSend = await formatApiResponse(ctx, session, apiResponse, config, logger)
